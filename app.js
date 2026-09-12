@@ -1,45 +1,10 @@
 /* =========================================================
-   PRICES — edit this section whenever prices change.
-   Every value below is a per-item price in dollars.
-   Nothing else in the file needs to change when you update
-   prices; just edit the numbers here.
+   UI TUNING
    ========================================================= */
-const PRICES = {
-  "Lego": { "Set": 15, "Loose": 5 },
-  "Action figures & Dolls": { "Large >30 cm": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Fidget toys": { "Large >30 cm": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Plastic Animals": { "Large >30 cm": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Stationery": { "Large >30 cm": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Vehicles": { "Large >30 cm": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Arts and crafts": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Brio train": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Construction and blocks": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Duplo": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Little People": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Music & sound toys": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "plastic foods": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Pokemon": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Wooden toys": { "Set": 15, "Med 20-30cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Kid bags": { "Large >35 cm": 15, "Med 20-35cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 },
-  "Soft toys": { "Large >35 cm": 15, "Med 20-35cm": 10, "Small 10cm-20cm": 5, "Tiny <10cm": 5 }
-};
-
-/* Items priced individually (no fixed size tiers) are grouped into one
-   category tile. These names become a "type" dropdown inside it, purely
-   so the sale summary still shows what was actually sold. */
-const MANUAL_TYPES = [
-  "Balls", "Board games", "Brand New items", "Costume", "Electronics toys",
-  "Kid furnitures", "Misc toys", "Other games", "Play sets", "Puzzles", "Sport toys"
-];
-const MANUAL_CATEGORY_NAME = "Individually Priced Items";
-
-/* Tile colors, cycled across categories for visual variety */
-const TILE_COLORS = ["#E8483C", "#2AA9A0", "#F5B942", "#7B6FD1", "#3D7A5C", "#D96B9C"];
-
-const CATEGORIES = [
-  ...Object.keys(PRICES).map(name => ({ name, manual: false })),
-  { name: MANUAL_CATEGORY_NAME, manual: true }
-];
+// Tiers priced below this get a typed quantity box instead of +/- steppers,
+// because loose bricks and rails are counted in the dozens or hundreds.
+// This is a UI affordance, not catalogue data, so it lives here not data.js.
+const BULK_PRICE_THRESHOLD = 1;
 
 /* =========================================================
    STATE
@@ -155,17 +120,23 @@ function renderDetailBody(){
       const key = cat.name + "|" + sub;
       const qty = sizedCart[key] || 0;
       const price = PRICES[cat.name][sub];
+      // Loose bricks/rails sell in the dozens or hundreds at ~$0.10 each.
+      // Tapping "+" that many times isn't workable at a counter, so any
+      // tier under BULK_PRICE_THRESHOLD gets a typed box instead of a stepper.
+      const control = price < BULK_PRICE_THRESHOLD
+        ? `<input type="number" class="qty-input" data-key="${key}" inputmode="numeric" min="0" step="1" placeholder="0" value="${qty || ""}">`
+        : `<div class="stepper">
+            <button data-action="dec" data-key="${key}">&#8722;</button>
+            <span class="qty-val">${qty}</span>
+            <button data-action="inc" data-key="${key}">&#43;</button>
+          </div>`;
       return `
         <div class="sub-row">
           <div class="sub-info">
             <div class="sub-name">${sub}</div>
             <div class="sub-price">${fmt(price)} each</div>
           </div>
-          <div class="stepper">
-            <button data-action="dec" data-key="${key}">&#8722;</button>
-            <span class="qty-val">${qty}</span>
-            <button data-action="inc" data-key="${key}">&#43;</button>
-          </div>
+          ${control}
           <div class="line-total">${fmt(price*qty)}</div>
         </div>
       `;
@@ -177,6 +148,20 @@ function renderDetailBody(){
         const next = Math.max(0, (sizedCart[key] || 0) + delta);
         sizedCart[key] = next;
         renderDetailBody();
+        renderHeader();
+      });
+    });
+    // Typed quantities update in place. A full re-render on each keystroke
+    // would destroy focus and the caret position mid-number.
+    body.querySelectorAll(".qty-input").forEach(el => {
+      el.addEventListener("keydown", blockNonNumericKeys);
+      el.addEventListener("input", () => {
+        const key = el.dataset.key;
+        const raw = sanitizeNumberInput(el, false);
+        const qty = raw === "" ? 0 : parseInt(raw, 10);
+        sizedCart[key] = qty;
+        const price = PRICES[cat.name][key.split("|")[1]];
+        el.closest(".sub-row").querySelector(".line-total").textContent = fmt(price * qty);
         renderHeader();
       });
     });

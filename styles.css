@@ -362,3 +362,29 @@ main{ padding:18px 14px 24px; max-width:640px; margin:0 auto; }
   padding:20px 24px 4px;
   line-height:1.5;
 }
+
+/* Typed quantity box, used instead of a stepper for cheap loose items
+   (see BULK_PRICE_THRESHOLD in app.js). Sized to match .stepper's height
+   so bulk and stepper rows line up in the same sheet. */
+.qty-input{
+  width:74px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-family:inherit;
+  font-size:15px;
+  font-weight:700;
+  color:var(--navy);
+  text-align:center;
+  -moz-appearance:textfield;
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+.qty-input:focus{
+  outline:none;
+  border-color:var(--navy);
+}

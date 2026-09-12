@@ -70,7 +70,7 @@ describe("sized categories (steppers)", () => {
     app.tap(app.tile("Lego"));
     app.tap(app.subRow("Set").querySelector("[data-action=dec]"));
     assert.deepEqual(app.header(), { total: "$0.00", count: "0" });
-    assert.equal(app.subRow("Set").querySelector(".qty-val").textContent, "0");
+    assert.equal(app.subRow("Set").querySelector(".qty-input").value, "");
   });
 
   test("line total on the row matches price × qty", async () => {
@@ -82,13 +82,28 @@ describe("sized categories (steppers)", () => {
   });
 });
 
-describe("sized categories (bulk quantity box)", () => {
-  test("cheap tiers get a typed box instead of a stepper", async () => {
+describe("sized categories (typed quantity)", () => {
+  test("every tier has +/- buttons and a typed box", async () => {
     const app = await loadApp();
     app.tap(app.tile("Lego"));
-    assert.ok(app.subRow("Loose bricks").querySelector(".qty-input"), "Loose bricks should have a qty box");
-    assert.ok(!app.subRow("Loose bricks").querySelector(".stepper"));
-    assert.ok(app.subRow("Set").querySelector(".stepper"), "Set should have a stepper");
+    for (const row of app.$$(".sub-row")){
+      assert.ok(row.querySelector("[data-action=inc]") && row.querySelector("[data-action=dec]"), "missing +/-");
+      assert.ok(row.querySelector(".qty-input"), "missing typed box");
+    }
+  });
+
+  test("+ and − update the typed box without replacing it", async () => {
+    const app = await loadApp();
+    app.tap(app.tile("Lego"));
+    const box = app.subRow("Set").querySelector(".qty-input");
+    app.type(box, "5");
+    app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
+    assert.equal(box.value, "6");
+    assert.equal(app.subRow("Set").querySelector(".qty-input"), box, "box was re-rendered");
+    app.tap(app.subRow("Set").querySelector("[data-action=dec]"));
+    app.tap(app.subRow("Set").querySelector("[data-action=dec]"));
+    assert.equal(box.value, "4");
+    assert.deepEqual(app.header(), { total: "$60.00", count: "4" });
   });
 
   test("typing a quantity updates the line and the header in place", async () => {
@@ -118,6 +133,40 @@ describe("sized categories (bulk quantity box)", () => {
     app.type(box, "10");
     app.type(box, "");
     assert.deepEqual(app.header(), { total: "$0.00", count: "0" });
+  });
+});
+
+describe("quantity cap", () => {
+  test("a stepper stops at 999", async () => {
+    const app = await loadApp();
+    app.tap(app.tile("Lego"));
+    const inc = () => app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
+    for (let i = 0; i < 1005; i++) inc();
+    assert.equal(app.subRow("Set").querySelector(".qty-input").value, "999");
+    assert.deepEqual(app.header(), { total: "$14985.00", count: "999" });
+  });
+
+  test("a bulk box clamps what was typed to 999 and shows it", async () => {
+    const app = await loadApp();
+    app.tap(app.tile("Lego"));
+    const box = app.subRow("Loose bricks").querySelector(".qty-input");
+    app.type(box, "5000");
+    assert.equal(box.value, "999");
+    assert.deepEqual(app.header(), { total: "$99.90", count: "999" });
+  });
+
+  test("an individually priced quantity clamps to 999", async () => {
+    const app = await loadApp();
+    app.tap(app.tile(MANUAL_TILE));
+    addManual(app, { price: "1", qty: "1000" });
+    assert.deepEqual(app.header(), { total: "$999.00", count: "999" });
+  });
+
+  test("999 itself is allowed", async () => {
+    const app = await loadApp();
+    app.tap(app.tile("Lego"));
+    app.type(app.subRow("Loose bricks").querySelector(".qty-input"), "999");
+    assert.deepEqual(app.header(), { total: "$99.90", count: "999" });
   });
 });
 
@@ -320,14 +369,17 @@ describe("editing from the cart", () => {
     assert.equal(flashed[0].querySelector(".ml-info").textContent, "$20.00");
   });
 
-  test("the flash is one-shot — a stepper tap does not re-flash", async () => {
+  test("the flash is one-shot — reopening the tile normally does not flash", async () => {
     const app = await loadApp();
     app.tap(app.tile("Lego"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
     app.tap("#openCartBtn");
     app.tap(app.cartLines()[0].el);
-    app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
+    assert.equal(app.$$(".flash").length, 1);
+    app.tap("#doneBtn");
+    app.tap("#closeCartBtn");
+    app.tap(app.tile("Lego"));
     assert.equal(app.$$(".flash").length, 0);
   });
 

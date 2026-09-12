@@ -206,7 +206,7 @@ main{ padding:18px 14px 24px; max-width:640px; margin:0 auto; }
 .sub-row .sub-info{ flex:1; min-width:0; }
 .sub-row .sub-name{ font-weight:600; font-size:14.5px; }
 .sub-row .sub-price{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
-.stepper{ display:flex; align-items:center; gap:10px; }
+.stepper{ display:flex; align-items:center; gap:6px; }
 .stepper button{
   width:34px; height:34px;
   border-radius:10px;
@@ -218,12 +218,6 @@ main{ padding:18px 14px 24px; max-width:640px; margin:0 auto; }
   display:flex;align-items:center;justify-content:center;
 }
 .stepper button:active{ background:var(--paper); }
-.stepper .qty-val{
-  min-width:22px;
-  text-align:center;
-  font-weight:700;
-  font-size:15px;
-}
 .line-total{
   min-width:64px;
   text-align:right;
@@ -371,11 +365,10 @@ main{ padding:18px 14px 24px; max-width:640px; margin:0 auto; }
   line-height:1.5;
 }
 
-/* Typed quantity box, used instead of a stepper for cheap loose items
-   (see BULK_PRICE_THRESHOLD in app.js). Sized to match .stepper's height
-   so bulk and stepper rows line up in the same sheet. */
+/* Typed quantity box. Sits between the +/- buttons on every size tier;
+   height matches the buttons. */
 .qty-input{
-  width:74px;
+  width:56px;
   height:34px;
   border-radius:10px;
   border:1px solid var(--line);

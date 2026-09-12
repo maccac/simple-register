@@ -1,10 +1,20 @@
 /* =========================================================
    UI TUNING
    ========================================================= */
-// Tiers priced below this get a typed quantity box instead of +/- steppers,
-// because loose bricks and rails are counted in the dozens or hundreds.
-// This is a UI affordance, not catalogue data, so it lives here not data.js.
-const BULK_PRICE_THRESHOLD = 1;
+// Hard ceiling on any single quantity (a stepper tier, a bulk box, or the
+// individually-priced qty field). Nothing at the counter legitimately goes
+// higher, and it stops a leaned-on key producing a $10,000 line.
+const MAX_QTY = 999;
+
+// Clamps a typed quantity into [0, MAX_QTY] and writes the clamped value
+// back into the input so what's on screen matches what's in the cart.
+function clampQtyInput(el){
+  const raw = sanitizeNumberInput(el, false);
+  if (raw === "") return 0;
+  const qty = Math.min(MAX_QTY, parseInt(raw, 10));
+  if (String(qty) !== raw) el.value = String(qty);
+  return qty;
+}
 
 /* =========================================================
    STATE
@@ -139,6 +149,7 @@ function flashHighlight(body){
   const el = body.querySelector(`[data-line="${CSS.escape(highlightKey)}"]`);
   if (el){
     el.classList.add("flash");
+    el.addEventListener("animationend", () => el.classList.remove("flash"), { once: true });
     el.scrollIntoView({ block: "center" });
   }
   highlightKey = null;
@@ -153,14 +164,11 @@ function renderDetailBody(){
       const key = cat.name + "|" + sub;
       const qty = sizedCart[key] || 0;
       const price = PRICES[cat.name][sub];
-      // Loose bricks/rails sell in the dozens or hundreds at ~$0.10 each.
-      // Tapping "+" that many times isn't workable at a counter, so any
-      // tier under BULK_PRICE_THRESHOLD gets a typed box instead of a stepper.
-      const control = price < BULK_PRICE_THRESHOLD
-        ? `<input type="number" class="qty-input" data-key="${key}" inputmode="numeric" min="0" step="1" placeholder="0" value="${qty || ""}">`
-        : `<div class="stepper">
+      // Every tier gets both: +/- for one or two items, and a typed box in
+      // the middle for loose bricks at $0.10 that sell in the hundreds.
+      const control = `<div class="stepper">
             <button data-action="dec" data-key="${key}">&#8722;</button>
-            <span class="qty-val">${qty}</span>
+            <input type="number" class="qty-input" data-key="${key}" inputmode="numeric" min="0" max="${MAX_QTY}" step="1" placeholder="0" value="${qty || ""}">
             <button data-action="inc" data-key="${key}">&#43;</button>
           </div>`;
       return `
@@ -174,29 +182,28 @@ function renderDetailBody(){
         </div>
       `;
     }).join("");
+    // Both the buttons and typing update the row in place rather than
+    // re-rendering: a full re-render on each keystroke would destroy focus
+    // and the caret position mid-number.
+    const setQty = (row, qty) => {
+      const key = row.dataset.line;
+      sizedCart[key] = qty;
+      const price = PRICES[cat.name][key.split("|")[1]];
+      row.querySelector(".line-total").textContent = fmt(price * qty);
+      renderHeader();
+    };
     body.querySelectorAll("button[data-action]").forEach(b => {
       b.addEventListener("click", () => {
-        const key = b.dataset.key;
+        const row = b.closest(".sub-row");
         const delta = b.dataset.action === "inc" ? 1 : -1;
-        const next = Math.max(0, (sizedCart[key] || 0) + delta);
-        sizedCart[key] = next;
-        renderDetailBody();
-        renderHeader();
+        const next = Math.min(MAX_QTY, Math.max(0, (sizedCart[row.dataset.line] || 0) + delta));
+        row.querySelector(".qty-input").value = next || "";
+        setQty(row, next);
       });
     });
-    // Typed quantities update in place. A full re-render on each keystroke
-    // would destroy focus and the caret position mid-number.
     body.querySelectorAll(".qty-input").forEach(el => {
       el.addEventListener("keydown", blockNonNumericKeys);
-      el.addEventListener("input", () => {
-        const key = el.dataset.key;
-        const raw = sanitizeNumberInput(el, false);
-        const qty = raw === "" ? 0 : parseInt(raw, 10);
-        sizedCart[key] = qty;
-        const price = PRICES[cat.name][key.split("|")[1]];
-        el.closest(".sub-row").querySelector(".line-total").textContent = fmt(price * qty);
-        renderHeader();
-      });
+      el.addEventListener("input", () => setQty(el.closest(".sub-row"), clampQtyInput(el)));
     });
   } else if (cat.kind === "custom"){
     // One price box, nothing to choose. Each add is its own line at qty 1;
@@ -263,7 +270,7 @@ function renderDetailBody(){
           </div>
           <div class="field">
             <label>Quantity</label>
-            <input type="number" id="manualQty" inputmode="numeric" min="1" step="1" value="${manualDraft.qty}">
+            <input type="number" id="manualQty" inputmode="numeric" min="1" max="${MAX_QTY}" step="1" value="${manualDraft.qty}">
           </div>
         </div>
         <button class="add-btn" id="addManualBtn">Add to sale</button>
@@ -284,11 +291,11 @@ function renderDetailBody(){
     qtyEl.addEventListener("keydown", blockNonNumericKeys);
     typeEl.addEventListener("change", e => manualDraft.type = e.target.value);
     priceEl.addEventListener("input", e => manualDraft.price = sanitizeNumberInput(e.target, true));
-    qtyEl.addEventListener("input", e => manualDraft.qty = sanitizeNumberInput(e.target, false));
+    qtyEl.addEventListener("input", e => manualDraft.qty = clampQtyInput(e.target) || "");
     document.getElementById("addManualBtn").addEventListener("click", () => {
       const type = typeEl.value;
       const price = parseFloat(sanitizeNumberInput(priceEl, true));
-      const qty = parseInt(sanitizeNumberInput(qtyEl, false), 10);
+      const qty = clampQtyInput(qtyEl);
       if (!price || price <= 0 || !qty || qty <= 0){
         alert("Enter a price and quantity greater than 0.");
         return;

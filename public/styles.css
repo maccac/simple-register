@@ -117,6 +117,11 @@ main{ padding:18px 14px 24px; max-width:640px; margin:0 auto; }
   font-size:16px;
   line-height:1.15;
 }
+/* Badge sits top-right, so keep the name clear of it on tiles that have one
+   (long names like "Construction and blocks" otherwise wrap underneath). */
+.tile:has(.qty-badge) .name{
+  padding-right:36px;
+}
 .tile .meta{
   font-size:12px;
   font-weight:600;

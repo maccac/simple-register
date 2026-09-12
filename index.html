@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Berzerko — Sale Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">Berzerko<small>Sale calculator</small></div>
+  <button class="cart-pill" id="openCartBtn">
+    <span id="headerTotal">$0.00</span>
+    <span class="cart-count" id="headerCount">0</span>
+  </button>
+</header>
+
+<main>
+  <div class="section-label">Tap a category to add items</div>
+  <div class="grid" id="categoryGrid"></div>
+  <div class="footer-note">Sizes are priced in $5 steps: Small $5, Medium $10, Large/Set $15. To change these, edit the PRICES section at the top of app.js.</div>
+</main>
+
+<!-- Category detail sheet -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <button class="icon-btn" id="backBtn">&#8592;</button>
+      <div class="sheet-title" id="detailTitle">Category</div>
+    </div>
+    <div class="sheet-body" id="detailBody"></div>
+    <button class="done-btn" id="doneBtn">Done</button>
+  </div>
+</div>
+
+<!-- Cart sheet -->
+<div class="overlay" id="cartOverlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title">Current sale</div>
+    </div>
+    <div class="sheet-body" id="cartBody"></div>
+    <div class="total-bar">
+      <div>
+        <div class="t-label">TOTAL</div>
+        <div class="t-value" id="cartTotal">$0.00</div>
+      </div>
+    </div>
+    <button class="new-sale-btn" id="newSaleBtn">Start new sale</button>
+    <button class="close-link" id="closeCartBtn">Keep shopping</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

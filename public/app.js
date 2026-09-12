@@ -11,10 +11,17 @@ const BULK_PRICE_THRESHOLD = 1;
    ========================================================= */
 // sizedCart: { "Category|Subcategory": qty }
 let sizedCart = {};
-// manualCart: array of { id, category, price, qty }
+// manualCart: array of { id, category, type, price, qty } — every line from
+// a non-sized tile ("manual" and "custom" kinds) lands here, so the total,
+// count, cart list and "new sale" don't need to know the difference.
 let manualCart = [];
 let activeCategory = null;
 let manualDraft = { type: MANUAL_TYPES[0], price: "", qty: 1 };
+let customDraft = { price: "" };
+// Set when a category sheet was opened by tapping a cart line, so Done/back
+// go back to the cart instead of the grid, and the tapped line gets a flash.
+let returnToCart = false;
+let highlightKey = null;
 
 const fmt = n => "$" + n.toFixed(2);
 
@@ -67,7 +74,7 @@ function renderHeader(){
    CATEGORY GRID
    ========================================================= */
 function categoryQtyInCart(cat){
-  if (cat.manual){
+  if (cat.kind !== "sized"){
     return manualCart.filter(l => l.category === cat.name).reduce((a,l)=>a+l.qty,0);
   }
   let sum = 0;
@@ -77,18 +84,24 @@ function categoryQtyInCart(cat){
   return sum;
 }
 
+const TILE_META = {
+  sized: "Tap to choose size",
+  manual: "Priced individually",
+  custom: "Enter a price"
+};
+
 function renderGrid(){
   const grid = document.getElementById("categoryGrid");
   grid.innerHTML = "";
   CATEGORIES.forEach((cat, i) => {
     const btn = document.createElement("button");
-    btn.className = "tile" + (cat.manual ? " manual" : "");
+    btn.className = "tile" + (cat.kind !== "sized" ? " manual" : "");
     btn.style.background = TILE_COLORS[i % TILE_COLORS.length];
     const qty = categoryQtyInCart(cat);
     btn.innerHTML = `
       ${qty > 0 ? `<span class="qty-badge">${qty}</span>` : ""}
       <span class="name">${cat.name}</span>
-      <span class="meta">${cat.manual ? "Priced individually" : "Tap to choose size"}</span>
+      <span class="meta">${TILE_META[cat.kind]}</span>
     `;
     btn.addEventListener("click", () => openCategory(cat));
     grid.appendChild(btn);
@@ -98,9 +111,12 @@ function renderGrid(){
 /* =========================================================
    CATEGORY DETAIL SHEET
    ========================================================= */
-function openCategory(cat){
+function openCategory(cat, opts = {}){
   activeCategory = cat;
+  returnToCart = !!opts.fromCart;
+  highlightKey = opts.highlight || null;
   manualDraft = { type: MANUAL_TYPES[0], price: "", qty: 1 };
+  customDraft = { price: "" };
   document.getElementById("detailTitle").textContent = cat.name;
   renderDetailBody();
   document.getElementById("detailOverlay").classList.add("open");
@@ -109,12 +125,29 @@ function closeCategory(){
   document.getElementById("detailOverlay").classList.remove("open");
   activeCategory = null;
   renderGrid();
+  if (returnToCart){
+    returnToCart = false;
+    openCart();
+  }
+}
+
+// After a sheet renders, flash the row the user tapped in the cart so their
+// eye lands on the right tier. One-shot: cleared so stepper re-renders don't
+// flash again.
+function flashHighlight(body){
+  if (!highlightKey) return;
+  const el = body.querySelector(`[data-line="${CSS.escape(highlightKey)}"]`);
+  if (el){
+    el.classList.add("flash");
+    el.scrollIntoView({ block: "center" });
+  }
+  highlightKey = null;
 }
 
 function renderDetailBody(){
   const body = document.getElementById("detailBody");
   const cat = activeCategory;
-  if (!cat.manual){
+  if (cat.kind === "sized"){
     const subs = Object.keys(PRICES[cat.name]);
     body.innerHTML = subs.map(sub => {
       const key = cat.name + "|" + sub;
@@ -131,7 +164,7 @@ function renderDetailBody(){
             <button data-action="inc" data-key="${key}">&#43;</button>
           </div>`;
       return `
-        <div class="sub-row">
+        <div class="sub-row" data-line="${key}">
           <div class="sub-info">
             <div class="sub-name">${sub}</div>
             <div class="sub-price">${fmt(price)} each</div>
@@ -165,6 +198,53 @@ function renderDetailBody(){
         renderHeader();
       });
     });
+  } else if (cat.kind === "custom"){
+    // One price box, nothing to choose. Each add is its own line at qty 1;
+    // tap Add again for the next item.
+    const existingLines = manualCart.filter(l => l.category === cat.name);
+    body.innerHTML = `
+      <div class="manual-form">
+        <div class="hint">Type the price and add it to the sale. Repeat for each item.</div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Price ($)</label>
+          <input type="number" id="customPrice" inputmode="decimal" min="0" step="any" placeholder="e.g. 12.50" value="${customDraft.price}" autofocus>
+        </div>
+        <button class="add-btn" id="addCustomBtn">Add to sale</button>
+      </div>
+      <div class="manual-lines">
+        ${existingLines.length ? existingLines.map(l => `
+          <div class="manual-line" data-line="${l.id}">
+            <div class="ml-info"><strong>${fmt(l.price)}</strong></div>
+            <button class="remove-x" data-id="${l.id}">&times;</button>
+          </div>
+        `).join("") : `<div class="hint" style="margin-top:8px;">No items added yet.</div>`}
+      </div>
+    `;
+    const priceEl = document.getElementById("customPrice");
+    priceEl.addEventListener("keydown", blockNonNumericKeys);
+    priceEl.addEventListener("input", e => customDraft.price = sanitizeNumberInput(e.target, true));
+    const addCustom = () => {
+      const price = parseFloat(sanitizeNumberInput(priceEl, true));
+      if (!price || price <= 0){
+        alert("Enter a price greater than 0.");
+        return;
+      }
+      manualCart.push({ id: cat.name + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,6), category: cat.name, type: cat.name, price, qty: 1 });
+      customDraft = { price: "" };
+      renderDetailBody();
+      renderHeader();
+    };
+    document.getElementById("addCustomBtn").addEventListener("click", addCustom);
+    // Enter on the keypad adds too, so a run of items is type → Enter → type → Enter.
+    priceEl.addEventListener("keydown", e => { if (e.key === "Enter") addCustom(); });
+    priceEl.focus();
+    body.querySelectorAll(".remove-x").forEach(b => {
+      b.addEventListener("click", () => {
+        manualCart = manualCart.filter(l => l.id !== b.dataset.id);
+        renderDetailBody();
+        renderHeader();
+      });
+    });
   } else {
     const existingLines = manualCart.filter(l => l.category === cat.name);
     body.innerHTML = `
@@ -190,7 +270,7 @@ function renderDetailBody(){
       </div>
       <div class="manual-lines">
         ${existingLines.length ? existingLines.map(l => `
-          <div class="manual-line">
+          <div class="manual-line" data-line="${l.id}">
             <div class="ml-info"><strong>${l.type}</strong> &middot; ${l.qty} &times; ${fmt(l.price)} = ${fmt(l.qty*l.price)}</div>
             <button class="remove-x" data-id="${l.id}">&times;</button>
           </div>
@@ -226,6 +306,7 @@ function renderDetailBody(){
       });
     });
   }
+  flashHighlight(body);
 }
 
 /* =========================================================
@@ -246,26 +327,41 @@ function renderCart(){
     if (!qty) continue;
     const [cat, sub] = key.split("|");
     const price = PRICES[cat][sub];
-    lines.push({ key, label: cat, sub, qty, price, total: qty*price, type: "sized" });
+    lines.push({ key, label: cat, detail: `${sub} &middot; ${qty} &times; ${fmt(price)}`, total: qty*price, type: "sized" });
   }
   for (const l of manualCart){
-    lines.push({ key: l.id, label: l.type, sub: "Individually priced", qty: l.qty, price: l.price, total: l.qty*l.price, type: "manual" });
+    // Individually priced lines show their type as the label with the
+    // category underneath; manual-price lines have no type, so the category
+    // name alone is the label.
+    const prefix = l.type === l.category ? "" : "Individually priced &middot; ";
+    lines.push({ key: l.id, label: l.type, detail: `${prefix}${l.qty} &times; ${fmt(l.price)}`, total: l.qty*l.price, type: "manual", category: l.category });
   }
   if (!lines.length){
     body.innerHTML = `<div class="empty-cart">No items added yet.<br>Tap a category to get started.</div>`;
   } else {
-    body.innerHTML = lines.map(l => `
-      <div class="cart-line">
+    body.innerHTML = `<div class="cart-hint">Tap an item to change it.</div>` + lines.map(l => `
+      <div class="cart-line" data-type="${l.type}" data-key="${l.key}" data-cat="${l.type === "sized" ? l.label : l.category}">
         <div class="cl-info">
           <div class="cl-cat">${l.label}</div>
-          <div class="cl-sub">${l.sub} &middot; ${l.qty} &times; ${fmt(l.price)}</div>
+          <div class="cl-sub">${l.detail}</div>
         </div>
         <div class="cl-total">${fmt(l.total)}</div>
         <button class="cl-remove" data-type="${l.type}" data-key="${l.key}">&times;</button>
       </div>
     `).join("");
+    // Tap a line to jump to its category sheet with the tapped row flashed;
+    // Done/back on that sheet returns here.
+    body.querySelectorAll(".cart-line").forEach(row => {
+      row.addEventListener("click", () => {
+        const cat = CATEGORIES.find(c => c.name === row.dataset.cat);
+        if (!cat) return;
+        closeCart();
+        openCategory(cat, { fromCart: true, highlight: row.dataset.key });
+      });
+    });
     body.querySelectorAll(".cl-remove").forEach(b => {
-      b.addEventListener("click", () => {
+      b.addEventListener("click", e => {
+        e.stopPropagation();
         if (b.dataset.type === "sized"){
           sizedCart[b.dataset.key] = 0;
         } else {

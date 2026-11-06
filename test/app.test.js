@@ -32,7 +32,7 @@ describe("category grid", () => {
     const app = await loadApp();
     const tiles = app.$$(".tile");
     assert.equal(tiles.length, app.CATEGORIES.length);
-    assert.equal(app.tile("Lego").querySelector(".meta").textContent, "Tap to choose size");
+    assert.equal(app.tile("Duplo").querySelector(".meta").textContent, "Tap to choose");
     assert.equal(app.tile(MANUAL_TILE).querySelector(".meta").textContent, "Priced individually");
     assert.equal(app.tile(CUSTOM_TILE).querySelector(".meta").textContent, "Enter a price");
   });
@@ -45,18 +45,18 @@ describe("category grid", () => {
 
   test("tile badge shows the category's quantity after closing the sheet", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
-    assert.equal(app.tile("Lego").querySelector(".qty-badge").textContent, "2");
+    assert.equal(app.tile("Duplo").querySelector(".qty-badge").textContent, "2");
   });
 });
 
 describe("sized categories (steppers)", () => {
   test("+ adds one at the tier price, − takes it away", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     assert.deepEqual(app.header(), { total: "$15.00", count: "1" });
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
@@ -67,7 +67,7 @@ describe("sized categories (steppers)", () => {
 
   test("− never goes below zero", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=dec]"));
     assert.deepEqual(app.header(), { total: "$0.00", count: "0" });
     assert.equal(app.subRow("Set").querySelector(".qty-input").value, "");
@@ -82,10 +82,23 @@ describe("sized categories (steppers)", () => {
   });
 });
 
+describe("price-only categories", () => {
+  for (const name of ["Lego", "Puzzles", "Games"]){
+    test(`${name} offers $5, $10, $15 and $20`, async () => {
+      const app = await loadApp();
+      app.tap(app.tile(name));
+      assert.deepEqual(app.$$(".sub-name").map(e => e.textContent), ["$5", "$10", "$15", "$20"]);
+      app.tap(app.subRow("$20").querySelector("[data-action=inc]"));
+      app.tap(app.subRow("$5").querySelector("[data-action=inc]"));
+      assert.deepEqual(app.header(), { total: "$25.00", count: "2" });
+    });
+  }
+});
+
 describe("sized categories (typed quantity)", () => {
   test("every tier has +/- buttons and a typed box", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     for (const row of app.$$(".sub-row")){
       assert.ok(row.querySelector("[data-action=inc]") && row.querySelector("[data-action=dec]"), "missing +/-");
       assert.ok(row.querySelector(".qty-input"), "missing typed box");
@@ -94,7 +107,7 @@ describe("sized categories (typed quantity)", () => {
 
   test("+ and − update the typed box without replacing it", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const box = app.subRow("Set").querySelector(".qty-input");
     app.type(box, "5");
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
@@ -108,7 +121,7 @@ describe("sized categories (typed quantity)", () => {
 
   test("typing a quantity updates the line and the header in place", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const box = app.subRow("Loose bricks").querySelector(".qty-input");
     app.type(box, "25");
     assert.equal(app.subRow("Loose bricks").querySelector(".line-total").textContent, "$2.50");
@@ -119,7 +132,7 @@ describe("sized categories (typed quantity)", () => {
 
   test("rejects minus, plus, e and decimals", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const box = app.subRow("Loose bricks").querySelector(".qty-input");
     app.type(box, "-1e2+.5");
     assert.equal(box.value, "125");
@@ -128,7 +141,7 @@ describe("sized categories (typed quantity)", () => {
 
   test("clearing the box goes back to zero", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const box = app.subRow("Loose bricks").querySelector(".qty-input");
     app.type(box, "10");
     app.type(box, "");
@@ -139,7 +152,7 @@ describe("sized categories (typed quantity)", () => {
 describe("quantity cap", () => {
   test("a stepper stops at 999", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const inc = () => app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     for (let i = 0; i < 1005; i++) inc();
     assert.equal(app.subRow("Set").querySelector(".qty-input").value, "999");
@@ -148,7 +161,7 @@ describe("quantity cap", () => {
 
   test("a bulk box clamps what was typed to 999 and shows it", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     const box = app.subRow("Loose bricks").querySelector(".qty-input");
     app.type(box, "5000");
     assert.equal(box.value, "999");
@@ -164,7 +177,7 @@ describe("quantity cap", () => {
 
   test("999 itself is allowed", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.type(app.subRow("Loose bricks").querySelector(".qty-input"), "999");
     assert.deepEqual(app.header(), { total: "$99.90", count: "999" });
   });
@@ -289,7 +302,7 @@ describe("manual price", () => {
 describe("cart sheet", () => {
   test("opens from the header pill and lists every line with the right labels", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
     app.tap(app.tile(MANUAL_TILE));
@@ -303,7 +316,7 @@ describe("cart sheet", () => {
     assert.ok(app.isOpen("cartOverlay"));
     const lines = app.cartLines().map(({ cat, sub, total }) => ({ cat, sub, total }));
     assert.deepEqual(lines, [
-      { cat: "Lego",         sub: "Set · 1 × $15.00",                  total: "$15.00" },
+      { cat: "Duplo",        sub: "Set · 1 × $15.00",                  total: "$15.00" },
       { cat: "Balls",        sub: "Individually priced · 1 × $10.00",  total: "$10.00" },
       { cat: CUSTOM_TILE,    sub: "1 × $12.50",                        total: "$12.50" }
     ]);
@@ -371,7 +384,7 @@ describe("editing from the cart", () => {
 
   test("the flash is one-shot — reopening the tile normally does not flash", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
     app.tap("#openCartBtn");
@@ -379,13 +392,13 @@ describe("editing from the cart", () => {
     assert.equal(app.$$(".flash").length, 1);
     app.tap("#doneBtn");
     app.tap("#closeCartBtn");
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     assert.equal(app.$$(".flash").length, 0);
   });
 
   test("Done returns to the cart with the edit reflected", async () => {
     const app = await loadApp();
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
     app.tap("#openCartBtn");
@@ -421,17 +434,94 @@ describe("editing from the cart", () => {
     app.tap("#doneBtn");
     app.tap("#closeCartBtn");
 
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap("#doneBtn");
     assert.ok(!app.isOpen("cartOverlay"), "normal Done must not reopen the cart");
     assert.ok(!app.isOpen("detailOverlay"));
   });
 });
 
+describe("leave warning", () => {
+  // True if the browser would prompt before unloading the page.
+  const warnsOnUnload = app => {
+    const ev = new app.window.Event("beforeunload", { cancelable: true });
+    app.window.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  };
+  // Presses back and waits for the app's popstate handler to have run.
+  const pressBack = app => new Promise(resolve => {
+    app.window.addEventListener("popstate", resolve, { once: true });
+    app.window.history.back();
+  });
+  const addItem = app => {
+    app.tap(app.tile(CUSTOM_TILE));
+    addCustom(app, "10");
+    app.tap("#doneBtn");
+  };
+
+  test("an empty sale neither warns nor touches history", async () => {
+    const app = await loadApp();
+    const before = app.window.history.length;
+    assert.equal(warnsOnUnload(app), false);
+    app.tap(app.tile("Duplo"));
+    app.tap("#doneBtn");
+    assert.equal(app.window.history.length, before);
+  });
+
+  test("an active sale warns on unload until it is emptied", async () => {
+    const app = await loadApp({ confirm: () => true });
+    addItem(app);
+    assert.equal(warnsOnUnload(app), true);
+    app.tap("#openCartBtn");
+    app.tap("#newSaleBtn");
+    assert.equal(warnsOnUnload(app), false);
+  });
+
+  test("further items don't add more history entries", async () => {
+    const app = await loadApp();
+    const before = app.window.history.length;
+    addItem(app);
+    addItem(app);
+    assert.equal(app.window.history.length, before + 1);
+  });
+
+  test("back asks each time, and cancelling keeps the sale", async () => {
+    let asked = 0;
+    const app = await loadApp({ confirm: () => { asked++; return false; } });
+    addItem(app);
+    await pressBack(app);
+    assert.equal(asked, 1);
+    assert.deepEqual(app.header(), { total: "$10.00", count: "1" });
+    await pressBack(app);
+    assert.equal(asked, 2, "guard must be re-armed after cancelling");
+    assert.deepEqual(app.header(), { total: "$10.00", count: "1" });
+  });
+
+  test("back and confirming clears the sale so unload doesn't warn again", async () => {
+    const app = await loadApp({ confirm: () => true });
+    addItem(app);
+    app.tap(app.tile(CUSTOM_TILE));
+    await pressBack(app);
+    assert.deepEqual(app.header(), { total: "$0.00", count: "0" });
+    assert.ok(!app.isOpen("detailOverlay"), "no stale sheet left open");
+    assert.equal(warnsOnUnload(app), false);
+  });
+
+  test("back doesn't ask once the sale has been emptied", async () => {
+    let asked = 0;
+    const app = await loadApp({ confirm: () => { asked++; return true; } });
+    addItem(app);
+    app.tap("#openCartBtn");
+    app.tap(app.cartLines()[0].el.querySelector(".cl-remove"));
+    await pressBack(app);
+    assert.equal(asked, 0);
+  });
+});
+
 describe("start new sale", () => {
   test("clears everything after confirming", async () => {
     const app = await loadApp({ confirm: () => true });
-    app.tap(app.tile("Lego"));
+    app.tap(app.tile("Duplo"));
     app.tap(app.subRow("Set").querySelector("[data-action=inc]"));
     app.tap("#doneBtn");
     app.tap(app.tile(CUSTOM_TILE));

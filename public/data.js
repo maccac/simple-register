@@ -30,22 +30,20 @@
    prices; just edit the numbers here.
    ========================================================= */
 const PRICES = {
-  "Lego": { "Set": 15, "Loose bricks": 0.1, "Loose others": 0.5 },
   "Action figures & Dolls": { "Large >30 cm": 5, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Fidget toys": { "Large >30 cm": 5, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Plastic Animals": { "Large >30 cm": 7, "Med 20-30cm": 5, "Small 10cm-20cm": 3, "Tiny <10cm": 1 },
-  "Stationery": { "Large >30 cm": 5, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Vehicles": { "Large >30 cm": 10, "Med 20-30cm": 5, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Arts and crafts": { "Set": 5, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
   "Brio train": { "Set": 15, "Loose rail": 0.1, "loose other": 2, "loose train": 3 },
   "Construction and blocks": { "Set": 15, "Loose bricks": 0.1, "Loose others": 0.5 },
   "Duplo": { "Set": 15, "Loose bricks": 0.1, "Loose others": 0.5 },
-  "Little People": { "Set": 15, "Loose others": 0.5 },
+  "Fidget toys": { "Large >30 cm": 5, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
+  "Games": { "$5": 5, "$10": 10, "$15": 15, "$20": 20 },
+  "Lego": { "$5": 5, "$10": 10, "$15": 15, "$20": 20 },
   "Music & sound toys": { "Set": 15, "Med 20-30cm": 5, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
+  "Plastic Animals": { "Large >30 cm": 7, "Med 20-30cm": 5, "Small 10cm-20cm": 3, "Tiny <10cm": 1 },
   "plastic foods": { "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Wooden toys": { "Set": 10, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Kid bags": { "Large >35 cm": 5, "Med 20-35cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
-  "Soft toys": { "Large >35 cm": 10, "Med 20-35cm": 5, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 }
+  "Puzzles": { "$5": 5, "$10": 10, "$15": 15, "$20": 20 },
+  "Soft toys": { "Large >35 cm": 10, "Med 20-35cm": 5, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
+  "Vehicles": { "Large >30 cm": 10, "Med 20-30cm": 5, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 },
+  "Wooden toys": { "Set": 10, "Med 20-30cm": 3, "Small 10cm-20cm": 2, "Tiny <10cm": 0.5 }
 };
 
 /* Items priced individually (no fixed size tiers) are grouped into one

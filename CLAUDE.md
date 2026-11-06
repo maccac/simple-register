@@ -1,8 +1,9 @@
 # Berzerko — Sale Calculator
 
-Point-of-sale calculator for Berzerko, a toy re-sale store. Staff use it on a
-phone at checkout: tap categories, build a cart, read the total. No accounts,
-no order history, no server.
+Point-of-sale calculator, a toy re-sale store. Staff use it on a
+phone or tablet at checkout: tap categories, build a cart, read the total. 
+
+It's built for single day usage and has no data, account or database backing it for simplicity.
 
 ## Structure
 
@@ -22,7 +23,7 @@ Plain HTML/CSS/JS. `package.json` exists only for the tests; nothing in it ships
 
 All in `public/data.js`. Three kinds of category tile:
 
-- **Sized** — `PRICES` maps category → size tier → price (e.g. Lego: Set $15,
+- **Sized** — `PRICES` maps category → size tier → price (e.g. Duplo: Set $15,
   Loose bricks $0.10). Staff pick a quantity per tier.
 - **Individually Priced Items** — one tile; staff pick a type from
   `MANUAL_TYPES` and enter a price and quantity.
@@ -32,7 +33,7 @@ To change a price, edit `PRICES`.
 
 ## Build and test
 
-There is no build. `npm install` once, then:
+There is no build just tests. `npm install` once, then:
 
 | | |
 |---|---|

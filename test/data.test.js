@@ -33,6 +33,12 @@ describe("PRICES", () => {
     }
   });
 
+  test("categories are in alphabetical order, ignoring case", () => {
+    const names = Object.keys(PRICES);
+    const sorted = [...names].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+    assert.deepEqual(names, sorted);
+  });
+
   // CLAUDE.md: Pokemon was deliberately dropped after transcribing the CSV.
   // Re-transcribing the sheet wholesale brings it back — fail loudly.
   test("Pokemon stays removed", () => {

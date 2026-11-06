@@ -32,6 +32,9 @@ let customDraft = { price: "" };
 // go back to the cart instead of the grid, and the tapped line gets a flash.
 let returnToCart = false;
 let highlightKey = null;
+// True while the current history entry is the guard that catches the back
+// button. Read from history so a reload doesn't stack a second guard on top.
+let guardArmed = !!history.state?.leaveGuard;
 
 const fmt = n => "$" + n.toFixed(2);
 
@@ -78,6 +81,7 @@ function calcCount(){
 function renderHeader(){
   document.getElementById("headerTotal").textContent = fmt(calcTotal());
   document.getElementById("headerCount").textContent = calcCount();
+  armLeaveGuard(); // every cart change lands here
 }
 
 /* =========================================================
@@ -95,7 +99,7 @@ function categoryQtyInCart(cat){
 }
 
 const TILE_META = {
-  sized: "Tap to choose size",
+  sized: "Tap to choose",
   manual: "Priced individually",
   custom: "Enter a price"
 };
@@ -388,13 +392,53 @@ function startNewSale(){
     const ok = confirm("Start a new sale? This will clear the current total.");
     if (!ok) return;
   }
+  clearSale();
+}
+
+function clearSale(){
   sizedCart = {};
   manualCart = [];
+  returnToCart = false;
+  document.getElementById("detailOverlay").classList.remove("open");
+  activeCategory = null;
   renderHeader();
   renderGrid();
   renderCart();
   closeCart();
 }
+
+/* =========================================================
+   LEAVE WARNING
+   Two layers, because neither covers every device:
+   - beforeunload handles refresh, closing the tab and typed URLs, but iOS
+     Safari never fires it.
+   - a guard history entry catches the back button/swipe everywhere.
+   ========================================================= */
+// Armed when the first item is added, not on page load: that keeps an empty
+// app from trapping back, and browsers ignore entries pushed without a tap.
+function armLeaveGuard(){
+  if (guardArmed || calcCount() === 0) return;
+  history.pushState({ leaveGuard: true }, "");
+  guardArmed = true;
+}
+
+window.addEventListener("popstate", e => {
+  guardArmed = !!e.state?.leaveGuard;
+  if (guardArmed) return; // went forward onto the guard, nothing to warn about
+  if (calcCount() > 0 && !confirm("Leave this page? The current sale will be lost.")){
+    armLeaveGuard();
+    return;
+  }
+  // Clearing first stops beforeunload warning a second time on the way out.
+  clearSale();
+  history.back();
+});
+
+window.addEventListener("beforeunload", e => {
+  if (calcCount() === 0) return;
+  e.preventDefault();
+  e.returnValue = ""; // older Safari and Chrome only honour this form
+});
 
 /* =========================================================
    WIRE UP
